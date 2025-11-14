@@ -1,0 +1,230 @@
+{
+  "sorts": {
+    "Épée céleste": {
+      "cout": {
+        "PA": 2
+      },
+      "icone": "Épée céleste.png"
+    },
+    "Fulgur": {
+      "cout": {
+        "PA": 3
+      },
+      "icone": "Fulgur.png"
+    },
+    "Super Iop Punch": {
+      "cout": {
+        "PA": 4
+      },
+      "icone": "Super Iop Punch.png"
+    },
+    "Jugement": {
+      "cout": {
+        "PA": 1
+      },
+      "icone": "Jugement.png"
+    },
+    "Colère de Iop": {
+      "cout": {
+        "PA": 6,
+        "PW": 1
+      },
+      "icone": "Colère de Iop.png"
+    },
+    "Ébranler": {
+      "cout": {
+        "PA": 2
+      },
+      "icone": "Ébranler.png"
+    },
+    "Roknocerok": {
+      "cout": {
+        "PA": 4
+      },
+      "icone": "Roknocerok.png"
+    },
+    "Fendoir": {
+      "cout": {
+        "PA": 3
+      },
+      "icone": "Fendoir.png"
+    },
+    "Ravage": {
+      "cout": {
+        "PA": 5
+      },
+      "icone": "Ravage.png"
+    },
+    "Jabs": {
+      "cout": {
+        "PA": 3
+      },
+      "icone": "Jabs.png"
+    },
+    "Rafale": {
+      "cout": {
+        "PA": 1
+      },
+      "icone": "Rafale.png"
+    },
+    "Torgnole": {
+      "cout": {
+        "PA": 2
+      },
+      "icone": "Torgnole.png"
+    },
+    "Tannée": {
+      "cout": {
+        "PA": 4
+      },
+      "icone": "Tannée.png"
+    },
+    "Épée de Iop": {
+      "cout": {
+        "PA": 3
+      },
+      "icone": "Épée de Iop.png"
+    },
+    "Focus": {
+      "cout": {
+        "PA": 2
+      },
+      "icone": "Focus.png"
+    },
+    "Vertu": {
+      "cout": {
+        "PA": 2,
+        "PW": 1
+      },
+      "icone": "Vertu.png"
+    },
+    "Amplification": {
+      "cout": {
+        "PM": 2,
+        "PW": 2
+      },
+      "icone": "Amplification.png"
+    },
+    "Duel": {
+      "cout": {
+        "PA": 1
+      },
+      "icone": "Duel.png"
+    },
+    "Posture": {
+      "cout": {
+        "PA": 2,
+        "PW": 1
+      },
+      "icone": "Posture.png"
+    },
+    "Heure de gloire": {
+      "cout": {
+        "PA": 3
+      },
+      "icone": "Heure de gloire.png"
+    },
+    "Éventrail": {
+      "cout": {
+        "PM": 1
+      },
+      "icone": "Éventrail.png"
+    },
+    "Uppercut": {
+      "cout": {
+        "PW": 1
+      },
+      "icone": "Uppercut.png"
+    },
+    "Bond": {
+      "cout": {
+        "PA": 4
+      },
+      "icone": "Bond.png"
+    },
+    "Étendard_de_bravoure": {
+      "cout": {
+        "PA": 2
+      },
+      "icone": "Étendard de bravoure.png"
+    }
+  },
+  "combos": {
+    "combo_1": {
+      "nom": "Vol de Vie",
+      "sequence": [
+        {
+          "PM": 1
+        },
+        {
+          "PA": 3
+        },
+        {
+          "PA": 3
+        }
+      ]
+    },
+    "combo_2": {
+      "nom": "Poussée",
+      "sequence": [
+        {
+          "PA": 1
+        },
+        {
+          "PA": 1
+        },
+        {
+          "PA": 2
+        }
+      ]
+    },
+    "combo_3": {
+      "nom": "Préparation",
+      "sequence": [
+        {
+          "PM": 1
+        },
+        {
+          "PM": 1
+        },
+        {
+          "PW": 1
+        }
+      ]
+    },
+    "combo_4": {
+      "nom": "Dommages +",
+      "sequence": [
+        {
+          "PA": 2
+        },
+        {
+          "PA": 1
+        },
+        {
+          "PM": 1
+        }
+      ]
+    },
+    "combo_5": {
+      "nom": "Combo PA",
+      "sequence": [
+        {
+          "PW": 1
+        },
+        {
+          "PA": 3
+        },
+        {
+          "PW": 1
+        },
+        {
+          "PA": 1
+        }
+      ]
+    }
+  }
+}
+
+
+

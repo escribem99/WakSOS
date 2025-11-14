@@ -1,0 +1,40 @@
+{
+  "overlay": {
+    "transparency": 0.85,
+    "always_on_top": true,
+    "positions": {
+      "iop": {
+        "x": 100,
+        "y": 100
+      },
+      "cra": {
+        "x": 400,
+        "y": 100
+      }
+    }
+  },
+  "log_path": "C:/Users/kelia/AppData/Roaming/zaap/gamesLogs/wakfu/logs/wakfu_chat.log",
+  "classes": {
+    "iop": {
+      "enabled": true,
+      "states": [
+        "Concentration",
+        "Courroux",
+        "Préparation"
+      ]
+    },
+    "cra": {
+      "enabled": true,
+      "states": [
+        "Affûtage",
+        "Précision"
+      ]
+    }
+  },
+  "window_mapping": {
+    "iop": {
+      "hwnd": 199212,
+      "title": "Tarrtin - WAKFU"
+    }
+  }
+}
