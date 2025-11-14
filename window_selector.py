@@ -5,7 +5,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import json
 import os
+import threading
 from debug_logger import debug, info, error, warning
+from update_checker import check_update_available, perform_update
 
 try:
     import win32gui
@@ -32,6 +34,10 @@ class WindowSelector:
         }
         self.window_handles = {}  # {hwnd: window_info}
         self.selection_done = False
+        self.update_available = False
+        self.update_button = None
+        self.update_blink_state = False
+        self.update_blink_job = None
         
         # Créer la fenêtre principale ou une Toplevel si parent fourni
         if parent is None:
@@ -215,6 +221,20 @@ class WindowSelector:
         )
         ok_btn.pack(side=tk.LEFT, padx=10)
         
+        # Bouton Mettre à jour
+        self.update_button = tk.Button(
+            button_frame,
+            text="Mettre à jour",
+            command=self.handle_update,
+            font=('Arial', 10),
+            width=15,
+            height=2,
+            state=tk.DISABLED,
+            bg='#808080',  # Gris par défaut
+            fg='white'
+        )
+        self.update_button.pack(side=tk.LEFT, padx=10)
+        
         skip_btn = tk.Button(
             button_frame,
             text="Ignorer",
@@ -224,6 +244,9 @@ class WindowSelector:
             height=2
         )
         skip_btn.pack(side=tk.LEFT, padx=10)
+        
+        # Vérifier les mises à jour en arrière-plan
+        self.check_for_updates()
         
         # Rafraîchir la liste au démarrage
         self.refresh_windows()
@@ -284,11 +307,136 @@ class WindowSelector:
                 pass
         # WindowSelector.validate() terminé
     
+    def check_for_updates(self):
+        """Vérifie s'il y a des mises à jour disponibles en arrière-plan"""
+        def check_thread():
+            try:
+                has_update, error_msg = check_update_available()
+                if has_update:
+                    self.update_available = True
+                    # Activer le bouton et démarrer le clignotement
+                    self.root.after(0, self.enable_update_button)
+                else:
+                    self.update_available = False
+                    # Désactiver le bouton
+                    self.root.after(0, self.disable_update_button)
+            except Exception as e:
+                error(f"Erreur lors de la vérification des mises à jour: {e}")
+                self.root.after(0, self.disable_update_button)
+        
+        # Lancer la vérification dans un thread séparé
+        thread = threading.Thread(target=check_thread, daemon=True)
+        thread.start()
+    
+    def enable_update_button(self):
+        """Active le bouton de mise à jour et démarre le clignotement"""
+        if self.update_button:
+            self.update_button.config(state=tk.NORMAL, bg='#ff0000', fg='white')
+            self.start_update_blink()
+    
+    def disable_update_button(self):
+        """Désactive le bouton de mise à jour"""
+        if self.update_button:
+            self.stop_update_blink()
+            self.update_button.config(state=tk.DISABLED, bg='#808080', fg='white')
+    
+    def start_update_blink(self):
+        """Démarre l'animation de clignotement du bouton"""
+        if self.update_blink_job:
+            return  # Déjà en cours
+        
+        def blink():
+            if not self.update_available or not self.update_button:
+                self.stop_update_blink()
+                return
+            
+            self.update_blink_state = not self.update_blink_state
+            if self.update_blink_state:
+                self.update_button.config(bg='#ff0000')  # Rouge
+            else:
+                self.update_button.config(bg='#cc0000')  # Rouge foncé
+            
+            self.update_blink_job = self.root.after(500, blink)
+        
+        blink()
+    
+    def stop_update_blink(self):
+        """Arrête l'animation de clignotement"""
+        if self.update_blink_job:
+            self.root.after_cancel(self.update_blink_job)
+            self.update_blink_job = None
+        self.update_blink_state = False
+    
+    def handle_update(self):
+        """Gère le clic sur le bouton de mise à jour"""
+        if not self.update_available:
+            return
+        
+        # Demander confirmation
+        response = messagebox.askyesno(
+            "Mise à jour disponible",
+            "Une mise à jour est disponible.\n\n"
+            "Voulez-vous mettre à jour maintenant ?\n\n"
+            "Note: Le chemin des logs sera préservé.",
+            icon='question'
+        )
+        
+        if not response:
+            return
+        
+        # Désactiver le bouton pendant la mise à jour
+        self.update_button.config(state=tk.DISABLED, text="Mise à jour...")
+        self.stop_update_blink()
+        
+        def update_thread():
+            try:
+                success, message = perform_update(preserve_config=True)
+                if success:
+                    self.root.after(0, lambda: messagebox.showinfo(
+                        "Mise à jour réussie",
+                        "La mise à jour a été effectuée avec succès !\n\n"
+                        "Le programme va se redémarrer.",
+                        icon='info'
+                    ))
+                    # Redémarrer le programme
+                    self.root.after(1000, self.restart_program)
+                else:
+                    self.root.after(0, lambda: messagebox.showerror(
+                        "Erreur de mise à jour",
+                        f"Erreur lors de la mise à jour:\n{message}",
+                        icon='error'
+                    ))
+                    # Réactiver le bouton
+                    self.root.after(0, self.enable_update_button)
+            except Exception as e:
+                error(f"Erreur lors de la mise à jour: {e}")
+                self.root.after(0, lambda: messagebox.showerror(
+                    "Erreur",
+                    f"Erreur inattendue: {e}",
+                    icon='error'
+                ))
+                self.root.after(0, self.enable_update_button)
+        
+        thread = threading.Thread(target=update_thread, daemon=True)
+        thread.start()
+    
+    def restart_program(self):
+        """Redémarre le programme après une mise à jour"""
+        import sys
+        import subprocess
+        python = sys.executable
+        script = os.path.abspath("main.py")
+        subprocess.Popen([python, script])
+        self.root.quit()
+        sys.exit(0)
+    
     def skip(self):
         """Ignore la sélection (ne change pas la config)"""
         # WindowSelector.skip() appelé
         self.selected_windows = {"iop": None, "cra": None}
         self.selection_done = True
+        # Arrêter le clignotement si actif
+        self.stop_update_blink()
         # Fermer la fenêtre
         # Destruction de la fenêtre
         try:
