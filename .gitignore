@@ -40,6 +40,12 @@ logs/
 *.log
 update_config.json
 
+# Fichiers de développement à ne pas versionner
+debug_logger.py
+sort_editor.py
+test_parser.py
+WakSOS.code-workspace
+
 
 
 
