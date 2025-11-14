@@ -6,8 +6,13 @@ from tkinter import ttk, messagebox
 import json
 import os
 import threading
+from pathlib import Path
 from debug_logger import debug, info, error, warning
-from update_checker import check_update_available, perform_update
+try:
+    from update_checker import check_update_available, perform_update
+except ImportError:
+    check_update_available = None
+    perform_update = None
 
 try:
     import win32gui
@@ -45,7 +50,9 @@ class WindowSelector:
         else:
             self.root = tk.Toplevel(parent)
         
-        self.root.title("WakSOS - Sélection des fenêtres Wakfu")
+        # Charger la version
+        self.version = self.load_version()
+        self.root.title(f"WakSOS v{self.version} - Sélection des fenêtres Wakfu")
         self.root.geometry("700x500")
         self.root.resizable(False, False)
         
@@ -140,16 +147,36 @@ class WindowSelector:
         self.selected_windows[class_name] = None
         # Sélection effacée
     
+    def load_version(self):
+        """Charge le numéro de version depuis le fichier VERSION"""
+        try:
+            version_file = Path("VERSION")
+            if version_file.exists():
+                return version_file.read_text(encoding='utf-8').strip()
+        except:
+            pass
+        return "1.0.0"  # Version par défaut
+    
     def create_ui(self):
         """Crée l'interface utilisateur"""
         # Titre
         title_label = tk.Label(
             self.root,
-            text="Sélectionnez les fenêtres Wakfu pour chaque classe",
+            text=f"Sélectionnez les fenêtres Wakfu pour chaque classe",
             font=('Arial', 12, 'bold'),
             pady=10
         )
         title_label.pack()
+        
+        # Version
+        version_label = tk.Label(
+            self.root,
+            text=f"Version {self.version}",
+            font=('Arial', 8),
+            fg='gray',
+            pady=2
+        )
+        version_label.pack()
         
         # Instructions
         instructions = tk.Label(
