@@ -336,6 +336,9 @@ class WindowSelector:
     
     def check_for_updates(self):
         """Vérifie s'il y a des mises à jour disponibles en arrière-plan"""
+        if not check_update_available:
+            return
+        
         def check_thread():
             try:
                 has_update, error_msg = check_update_available()
@@ -396,7 +399,7 @@ class WindowSelector:
     
     def handle_update(self):
         """Gère le clic sur le bouton de mise à jour"""
-        if not self.update_available:
+        if not self.update_available or not perform_update:
             return
         
         # Demander confirmation

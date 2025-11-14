@@ -184,8 +184,19 @@ def perform_update(repo_url=None, preserve_config=True):
             check=True
         ).stdout.strip()
         
-        # Mettre à jour
-        subprocess.run(["git", "pull", "origin", current_branch], check=True, capture_output=True)
+        # Mettre à jour - utiliser reset pour forcer l'alignement avec origin/main
+        # Cela évite les conflits de merge en remplaçant complètement la version locale
+        # par celle de GitHub (sauf config.json qui est préservé)
+        reset_result = subprocess.run(
+            ["git", "reset", "--hard", f"origin/{current_branch}"], 
+            capture_output=True, 
+            text=True,
+            check=False
+        )
+        
+        if reset_result.returncode != 0:
+            # Si le reset échoue, retourner une erreur
+            return False, f"Erreur lors de la mise à jour: impossible de synchroniser avec GitHub.\nCode d'erreur: {reset_result.returncode}\n{reset_result.stderr or reset_result.stdout}"
         
         # Restaurer config.json avec le log_path sauvegardé
         if preserve_config and saved_log_path:
