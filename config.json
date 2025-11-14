@@ -13,7 +13,7 @@
       }
     }
   },
-  "log_path": "C:/Users/kelia/AppData/Roaming/zaap/gamesLogs/wakfu/logs/wakfu_chat.log",
+  "log_path": "",
   "classes": {
     "iop": {
       "enabled": true,
