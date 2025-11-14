@@ -2,6 +2,7 @@
 Module pour vérifier et effectuer les mises à jour depuis Git
 """
 import os
+import sys
 import subprocess
 import json
 import shutil
@@ -107,7 +108,8 @@ def check_update_available(repo_url=None):
 
 def perform_update(repo_url=None, preserve_config=True):
     """
-    Effectue la mise à jour depuis Git en préservant config.json
+    Effectue la mise à jour en supprimant le dossier et en le re-clonant depuis GitHub
+    Cela évite complètement les problèmes de conflits Git
     
     Args:
         repo_url: URL du dépôt Git (optionnel)
@@ -119,11 +121,8 @@ def perform_update(repo_url=None, preserve_config=True):
     if not check_git_available():
         return False, "Git n'est pas installé"
     
-    if not Path(".git").exists():
-        return False, "Pas un dépôt Git"
-    
     try:
-        # Sauvegarder le log_path AVANT toute opération Git
+        # Sauvegarder le log_path AVANT toute opération
         saved_log_path = None
         saved_config = None
         if preserve_config and Path("config.json").exists():
@@ -134,109 +133,159 @@ def perform_update(repo_url=None, preserve_config=True):
             except:
                 pass  # Si on ne peut pas lire, on continue quand même
         
-        # Sauvegarder les modifications locales
-        subprocess.run(["git", "stash"], capture_output=True, check=False)
-        
-        # Récupérer la configuration si pas d'URL fournie
+        # Récupérer l'URL du dépôt
         if not repo_url:
+            # Essayer depuis update_config.json
             config_file = Path("update_config.json")
             if config_file.exists():
-                with open(config_file, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                    repo_url = config.get("repo_url")
+                try:
+                    with open(config_file, 'r', encoding='utf-8') as f:
+                        config = json.load(f)
+                        repo_url = config.get("repo_url")
+                except:
+                    pass
+            
+            # Si toujours pas d'URL, essayer depuis Git
+            if not repo_url and Path(".git").exists():
+                try:
+                    result = subprocess.run(
+                        ["git", "remote", "get-url", "origin"],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    repo_url = result.stdout.strip()
+                except:
+                    pass
         
         if not repo_url:
-            try:
-                result = subprocess.run(
-                    ["git", "remote", "get-url", "origin"],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-                repo_url = result.stdout.strip()
-            except:
-                return False, "Aucun dépôt configuré"
+            return False, "Aucun dépôt configuré. Veuillez configurer l'URL du dépôt."
         
-        # Vérifier le remote origin
-        try:
-            result = subprocess.run(
-                ["git", "remote", "get-url", "origin"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            current_remote = result.stdout.strip()
-            
-            if repo_url and current_remote != repo_url:
-                subprocess.run(["git", "remote", "set-url", "origin", repo_url], check=True, capture_output=True)
-        except:
-            if repo_url:
-                subprocess.run(["git", "remote", "add", "origin", repo_url], check=True, capture_output=True)
+        # Obtenir le chemin du dossier actuel et du parent
+        current_dir = Path.cwd().resolve()
+        parent_dir = current_dir.parent
+        folder_name = current_dir.name
         
-        # Récupérer les dernières modifications
-        subprocess.run(["git", "fetch", "origin"], check=True, capture_output=True)
+        # Créer un nom temporaire pour le nouveau clone
+        temp_folder_name = f"{folder_name}_temp_clone"
+        temp_path = parent_dir / temp_folder_name
         
-        # Obtenir la branche actuelle
-        current_branch = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        # Cloner le dépôt dans un dossier temporaire
+        clone_result = subprocess.run(
+            ["git", "clone", repo_url, str(temp_path)],
             capture_output=True,
-            text=True,
-            check=True
-        ).stdout.strip()
-        
-        # Mettre à jour - utiliser reset pour forcer l'alignement avec origin/main
-        # Cela évite les conflits de merge en remplaçant complètement la version locale
-        # par celle de GitHub (sauf config.json qui est préservé)
-        reset_result = subprocess.run(
-            ["git", "reset", "--hard", f"origin/{current_branch}"], 
-            capture_output=True, 
             text=True,
             check=False
         )
         
-        if reset_result.returncode != 0:
-            # Si le reset échoue, retourner une erreur
-            return False, f"Erreur lors de la mise à jour: impossible de synchroniser avec GitHub.\nCode d'erreur: {reset_result.returncode}\n{reset_result.stderr or reset_result.stdout}"
+        if clone_result.returncode != 0:
+            error_msg = clone_result.stderr or clone_result.stdout or "Erreur inconnue"
+            return False, f"Erreur lors du clonage du dépôt:\n{error_msg}"
+        
+        # Vérifier que main.py existe dans le clone
+        if not (temp_path / "main.py").exists():
+            # Nettoyer le dossier temporaire
+            try:
+                shutil.rmtree(temp_path)
+            except:
+                pass
+            return False, "Erreur: main.py introuvable dans le dépôt cloné"
+        
+        # Vérifier la syntaxe de main.py
+        syntax_check = subprocess.run(
+            [sys.executable, "-m", "py_compile", str(temp_path / "main.py")],
+            capture_output=True,
+            text=True
+        )
+        
+        if syntax_check.returncode != 0:
+            error_msg = syntax_check.stderr or "Erreur de syntaxe inconnue"
+            # Nettoyer le dossier temporaire
+            try:
+                shutil.rmtree(temp_path)
+            except:
+                pass
+            return False, f"Erreur de syntaxe dans main.py du dépôt:\n{error_msg}"
+        
+        # Supprimer l'ancien dossier (sauf si on est dedans, on le fera après)
+        old_path_backup = parent_dir / f"{folder_name}_old_backup"
+        
+        # Renommer l'ancien dossier en backup
+        try:
+            if current_dir.exists():
+                if old_path_backup.exists():
+                    shutil.rmtree(old_path_backup)
+                current_dir.rename(old_path_backup)
+        except Exception as e:
+            # Si on ne peut pas renommer (fichiers ouverts), essayer de supprimer directement
+            try:
+                shutil.rmtree(current_dir)
+            except Exception as e2:
+                # Nettoyer le dossier temporaire
+                try:
+                    shutil.rmtree(temp_path)
+                except:
+                    pass
+                return False, f"Impossible de supprimer l'ancien dossier: {e2}"
+        
+        # Renommer le nouveau dossier avec le nom original
+        try:
+            temp_path.rename(current_dir)
+        except Exception as e:
+            # Si ça échoue, essayer de restaurer l'ancien
+            try:
+                if old_path_backup.exists():
+                    old_path_backup.rename(current_dir)
+            except:
+                pass
+            # Nettoyer
+            try:
+                if temp_path.exists():
+                    shutil.rmtree(temp_path)
+            except:
+                pass
+            return False, f"Erreur lors du déplacement du nouveau dossier: {e}"
+        
+        # Supprimer le backup de l'ancien dossier
+        try:
+            if old_path_backup.exists():
+                shutil.rmtree(old_path_backup)
+        except:
+            pass  # Pas grave si on ne peut pas supprimer le backup
         
         # Restaurer config.json avec le log_path sauvegardé
         if preserve_config and saved_log_path:
-            if Path("config.json").exists():
+            config_path = current_dir / "config.json"
+            if config_path.exists():
                 try:
-                    with open("config.json", 'r', encoding='utf-8') as f:
+                    with open(config_path, 'r', encoding='utf-8') as f:
                         config = json.load(f)
                     config["log_path"] = saved_log_path
-                    with open("config.json", 'w', encoding='utf-8') as f:
+                    with open(config_path, 'w', encoding='utf-8') as f:
                         json.dump(config, f, indent=2, ensure_ascii=False)
                 except:
                     # Si on ne peut pas lire/écrire, créer un nouveau config.json avec juste le log_path
                     if saved_config:
                         saved_config["log_path"] = saved_log_path
-                        with open("config.json", 'w', encoding='utf-8') as f:
+                        with open(config_path, 'w', encoding='utf-8') as f:
                             json.dump(saved_config, f, indent=2, ensure_ascii=False)
                     else:
                         new_config = {"log_path": saved_log_path}
-                        with open("config.json", 'w', encoding='utf-8') as f:
+                        with open(config_path, 'w', encoding='utf-8') as f:
                             json.dump(new_config, f, indent=2, ensure_ascii=False)
             else:
-                # Si config.json n'existe pas après la mise à jour, le recréer avec le log_path
+                # Si config.json n'existe pas, le créer avec le log_path
                 if saved_config:
                     saved_config["log_path"] = saved_log_path
-                    with open("config.json", 'w', encoding='utf-8') as f:
+                    with open(config_path, 'w', encoding='utf-8') as f:
                         json.dump(saved_config, f, indent=2, ensure_ascii=False)
                 else:
                     new_config = {"log_path": saved_log_path}
-                    with open("config.json", 'w', encoding='utf-8') as f:
+                    with open(config_path, 'w', encoding='utf-8') as f:
                         json.dump(new_config, f, indent=2, ensure_ascii=False)
-        
-        # Restaurer les modifications locales si possible
-        subprocess.run(["git", "stash", "pop"], capture_output=True)
         
         return True, "Mise à jour réussie"
         
-    except subprocess.CalledProcessError as e:
-        # Restaurer les modifications locales en cas d'erreur
-        subprocess.run(["git", "stash", "pop"], capture_output=True)
-        return False, f"Erreur lors de la mise à jour: {e}"
     except Exception as e:
         return False, f"Erreur: {e}"
 

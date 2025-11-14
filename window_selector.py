@@ -497,6 +497,114 @@ class WindowSelector:
                 print(f"Erreur dans run(): {e}")
                 import traceback
                 traceback.print_exc()
+    
+    def stop_update_blink(self):
+        """Arrête l'animation de clignotement"""
+        if self.update_blink_job:
+            self.root.after_cancel(self.update_blink_job)
+            self.update_blink_job = None
+        self.update_blink_state = False
+    
+    def handle_update(self):
+        """Gère le clic sur le bouton de mise à jour"""
+        if not self.update_available or not perform_update:
+            return
+        
+        # Demander confirmation
+        response = messagebox.askyesno(
+            "Mise à jour disponible",
+            "Une mise à jour est disponible.\n\n"
+            "Voulez-vous mettre à jour maintenant ?\n\n"
+            "Note: Le chemin des logs sera préservé.",
+            icon='question'
+        )
+        
+        if not response:
+            return
+        
+        # Désactiver le bouton pendant la mise à jour
+        self.update_button.config(state=tk.DISABLED, text="Mise à jour...")
+        self.stop_update_blink()
+        
+        def update_thread():
+            try:
+                success, message = perform_update(preserve_config=True)
+                if success:
+                    self.root.after(0, lambda: messagebox.showinfo(
+                        "Mise à jour réussie",
+                        "La mise à jour a été effectuée avec succès !\n\n"
+                        "Le programme va se redémarrer.",
+                        icon='info'
+                    ))
+                    # Redémarrer le programme
+                    self.root.after(1000, self.restart_program)
+                else:
+                    self.root.after(0, lambda: messagebox.showerror(
+                        "Erreur de mise à jour",
+                        f"Erreur lors de la mise à jour:\n{message}",
+                        icon='error'
+                    ))
+                    # Réactiver le bouton
+                    self.root.after(0, self.enable_update_button)
+            except Exception as e:
+                error(f"Erreur lors de la mise à jour: {e}")
+                self.root.after(0, lambda: messagebox.showerror(
+                    "Erreur",
+                    f"Erreur inattendue: {e}",
+                    icon='error'
+                ))
+                self.root.after(0, self.enable_update_button)
+        
+        thread = threading.Thread(target=update_thread, daemon=True)
+        thread.start()
+    
+    def restart_program(self):
+        """Redémarre le programme après une mise à jour"""
+        import sys
+        import subprocess
+        python = sys.executable
+        script = os.path.abspath("main.py")
+        subprocess.Popen([python, script])
+        self.root.quit()
+        sys.exit(0)
+    
+    def skip(self):
+        """Ignore la sélection (ne change pas la config)"""
+        # WindowSelector.skip() appelé
+        self.selected_windows = {"iop": None, "cra": None}
+        self.selection_done = True
+        # Arrêter le clignotement si actif
+        self.stop_update_blink()
+        # Fermer la fenêtre
+        # Destruction de la fenêtre
+        try:
+            # Juste détruire la fenêtre
+            # check_window() dans main.py détectera la fermeture et quittera le mainloop
+            # Appel de self.root.destroy()
+            self.root.destroy()
+            # self.root.destroy() terminé
+        except Exception as e:
+            error(f"Erreur lors de la fermeture: {e}")
+            import traceback
+            traceback.print_exc()
+            try:
+                self.root.destroy()
+            except:
+                pass
+        # WindowSelector.skip() terminé
+    
+    def run(self):
+        """Lance la fenêtre de sélection (ne fait rien si c'est une Toplevel, le parent gère mainloop)"""
+        self.selection_done = False
+        # Si c'est une Toplevel, le parent (temp_root) gérera mainloop()
+        # Si c'est un Tk(), utiliser mainloop()
+        if not isinstance(self.root, tk.Toplevel):
+            try:
+                self.root.mainloop()
+            except Exception as e:
+                print(f"Erreur dans run(): {e}")
+                import traceback
+                traceback.print_exc()
         return self.selected_windows
 
 
