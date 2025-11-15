@@ -549,9 +549,11 @@ class ComboOverlay:
                 # Arrêter le clignotement si la valeur est < 40
                 if self.preparation_blink_job:
                     try:
-                        self.root.after_cancel(self.preparation_blink_job)
+                        # Vérifier que la fenêtre existe encore avant d'annuler
+                        if self.root.winfo_exists():
+                            self.root.after_cancel(self.preparation_blink_job)
                     except:
-                        pass
+                        pass  # Fenêtre déjà détruite, ignorer
                     self.preparation_blink_job = None
                     self.preparation_blink_state = False
                     # Remettre la bordure normale
@@ -613,12 +615,22 @@ class ComboOverlay:
         blink_border = "#ffff00"  # Jaune vif pour le clignotement
         
         def blink():
+            # Vérifier que la fenêtre et le canvas existent encore
+            try:
+                if not self.root.winfo_exists() or not canvas.winfo_exists():
+                    self.preparation_blink_job = None
+                    return
+            except:
+                self.preparation_blink_job = None
+                return
+            
             # Vérifier que la barre existe toujours
             if "Préparation" not in self.state_labels:
                 self.preparation_blink_job = None
                 # Remettre la bordure normale
                 try:
-                    canvas.config(highlightbackground=original_border)
+                    if canvas.winfo_exists():
+                        canvas.config(highlightbackground=original_border)
                 except:
                     pass
                 return
@@ -628,7 +640,8 @@ class ComboOverlay:
                 self.preparation_blink_job = None
                 # Remettre la bordure normale
                 try:
-                    canvas.config(highlightbackground=original_border)
+                    if canvas.winfo_exists():
+                        canvas.config(highlightbackground=original_border)
                 except:
                     pass
                 return

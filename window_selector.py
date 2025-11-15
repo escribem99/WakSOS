@@ -376,24 +376,47 @@ class WindowSelector:
             return  # Déjà en cours
         
         def blink():
+            # Vérifier que la fenêtre existe encore
+            try:
+                if not self.root.winfo_exists():
+                    self.update_blink_job = None
+                    return
+            except:
+                self.update_blink_job = None
+                return
+            
             if not self.update_available or not self.update_button:
                 self.stop_update_blink()
                 return
             
-            self.update_blink_state = not self.update_blink_state
-            if self.update_blink_state:
-                self.update_button.config(bg='#ff0000')  # Rouge
-            else:
-                self.update_button.config(bg='#cc0000')  # Rouge foncé
-            
-            self.update_blink_job = self.root.after(500, blink)
+            try:
+                self.update_blink_state = not self.update_blink_state
+                if self.update_blink_state:
+                    self.update_button.config(bg='#ff0000')  # Rouge
+                else:
+                    self.update_button.config(bg='#cc0000')  # Rouge foncé
+                
+                self.update_blink_job = self.root.after(500, blink)
+            except tk.TclError:
+                # Fenêtre détruite pendant l'exécution
+                self.update_blink_job = None
+                return
+            except Exception:
+                # Autre erreur, arrêter le clignotement
+                self.update_blink_job = None
+                return
         
         blink()
     
     def stop_update_blink(self):
         """Arrête l'animation de clignotement"""
         if self.update_blink_job:
-            self.root.after_cancel(self.update_blink_job)
+            try:
+                # Vérifier que la fenêtre existe encore avant d'annuler
+                if self.root.winfo_exists():
+                    self.root.after_cancel(self.update_blink_job)
+            except:
+                pass  # Fenêtre déjà détruite, ignorer
             self.update_blink_job = None
         self.update_blink_state = False
     

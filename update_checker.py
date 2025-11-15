@@ -201,50 +201,47 @@ def check_update_available(repo_url=None):
             # En cas d'erreur, utiliser "main"
             current_branch = "main"
         
-        # Obtenir le commit local
+        # Lire la version locale depuis le fichier VERSION
+        local_version = None
         try:
-            local_commit_result = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            local_commit = local_commit_result.stdout.strip()
+            version_file = Path("VERSION")
+            if version_file.exists():
+                with open(version_file, 'r', encoding='utf-8') as f:
+                    local_version = f.read().strip()
         except:
-            return False, "Impossible de récupérer le commit local"
+            pass
         
-        # Obtenir le commit distant
+        if not local_version:
+            # Si on ne peut pas lire la version locale, retourner False
+            return False, None
+        
+        # Lire la version distante depuis le fichier VERSION du remote
         try:
-            remote_commit_result = subprocess.run(
-                ["git", "rev-parse", f"origin/{current_branch}"],
+            remote_version_result = subprocess.run(
+                ["git", "show", f"origin/{current_branch}:VERSION"],
                 capture_output=True,
                 text=True,
                 check=True
             )
-            remote_commit = remote_commit_result.stdout.strip()
+            remote_version = remote_version_result.stdout.strip()
         except:
-            # Si on ne peut pas récupérer le commit distant, essayer de fetch à nouveau
+            # Si on ne peut pas lire la version distante, retourner False sans erreur
+            return False, None
+        
+        # Comparer les versions (format: X.Y.Z)
+        def version_to_tuple(version_str):
+            """Convertit une version string en tuple pour comparaison"""
             try:
-                subprocess.run(
-                    ["git", "fetch", "origin", current_branch],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                    timeout=15
-                )
-                remote_commit_result = subprocess.run(
-                    ["git", "rev-parse", f"origin/{current_branch}"],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-                remote_commit = remote_commit_result.stdout.strip()
+                parts = version_str.split('.')
+                return tuple(int(part) for part in parts)
             except:
-                # Si ça échoue encore, retourner False sans erreur (peut-être pas de connexion)
-                return False, None
+                return (0, 0, 0)
         
-        # Comparer les commits
-        has_update = local_commit != remote_commit
+        local_version_tuple = version_to_tuple(local_version)
+        remote_version_tuple = version_to_tuple(remote_version)
+        
+        # Il y a une mise à jour si la version distante est supérieure à la version locale
+        has_update = remote_version_tuple > local_version_tuple
         return has_update, None
         
     except subprocess.CalledProcessError as e:
