@@ -331,25 +331,84 @@ def perform_update(repo_url=None, preserve_config=True):
         
         # Fonction helper pour supprimer le dossier temporaire de manière robuste
         def force_remove_temp_dir():
-            """Supprime le dossier temporaire avec plusieurs tentatives"""
+            """Supprime le dossier temporaire avec plusieurs tentatives et méthodes"""
             if not temp_path.exists():
                 return
-            max_attempts = 3
+            
+            import time
+            
+            # Méthode 1: Essayer avec shutil.rmtree avec plusieurs tentatives
+            max_attempts = 5
             for attempt in range(max_attempts):
                 try:
-                    shutil.rmtree(temp_path, ignore_errors=(attempt == max_attempts - 1))
+                    shutil.rmtree(temp_path, ignore_errors=False)
                     if not temp_path.exists():
                         return
-                except:
+                except (OSError, PermissionError) as e:
                     if attempt < max_attempts - 1:
-                        import time
-                        time.sleep(0.3)
+                        # Attendre plus longtemps entre les tentatives
+                        time.sleep(0.5 * (attempt + 1))  # Délai progressif: 0.5s, 1s, 1.5s, 2s
                     else:
                         # Dernière tentative avec ignore_errors
                         try:
                             shutil.rmtree(temp_path, ignore_errors=True)
+                            if not temp_path.exists():
+                                return
                         except:
                             pass
+            
+            # Méthode 2: Si shutil.rmtree échoue, essayer de supprimer fichier par fichier
+            if temp_path.exists():
+                try:
+                    # Supprimer récursivement tous les fichiers et dossiers
+                    for root, dirs, files in os.walk(temp_path, topdown=False):
+                        for name in files:
+                            file_path = Path(root) / name
+                            try:
+                                file_path.unlink()
+                            except:
+                                # Essayer de changer les permissions puis supprimer
+                                try:
+                                    os.chmod(file_path, 0o777)
+                                    file_path.unlink()
+                                except:
+                                    pass
+                        for name in dirs:
+                            dir_path = Path(root) / name
+                            try:
+                                dir_path.rmdir()
+                            except:
+                                pass
+                    # Supprimer le dossier racine
+                    try:
+                        temp_path.rmdir()
+                    except:
+                        pass
+                    
+                    if not temp_path.exists():
+                        return
+                except:
+                    pass
+            
+            # Méthode 3: Sur Windows, utiliser la commande système rmdir
+            if temp_path.exists() and os.name == 'nt':
+                try:
+                    # Utiliser rmdir /s /q pour forcer la suppression sur Windows
+                    cmd = f'rmdir /s /q "{temp_path}"'
+                    result = subprocess.run(cmd, shell=True, capture_output=True, timeout=10)
+                    time.sleep(0.5)  # Attendre un peu
+                    if not temp_path.exists():
+                        return
+                except:
+                    pass
+            
+            # Méthode 4: Dernière tentative avec ignore_errors=True
+            if temp_path.exists():
+                try:
+                    shutil.rmtree(temp_path, ignore_errors=True)
+                    time.sleep(0.5)
+                except:
+                    pass
         
         # Vérifier que main.py existe dans le clone
         if not (temp_path / "main.py").exists():
