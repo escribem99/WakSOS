@@ -205,23 +205,36 @@ class LogSelector:
                 )
     
     def auto_detect(self):
-        """Détecte automatiquement le fichier log"""
+        """Détecte automatiquement le fichier log en scannant tous les disques"""
+        # Afficher un message de recherche
+        self.path_label.config(
+            text="Recherche en cours...",
+            fg='orange'
+        )
+        self.root.update()
+        
+        # Créer un parser qui va scanner automatiquement tous les disques
         parser = WakfuLogParser()
         
         if os.path.exists(parser.log_path):
             self.selected_path = parser.log_path
             self.path_label.config(
                 text=f"✓ Détecté: {parser.log_path}",
-                fg='blue'
+                fg='green'
             )
             messagebox.showinfo(
                 "Détection réussie",
-                f"Fichier log trouvé:\n{parser.log_path}"
+                f"Fichier log trouvé automatiquement:\n{parser.log_path}"
             )
         else:
+            self.path_label.config(
+                text="Fichier log non trouvé",
+                fg='red'
+            )
             messagebox.showwarning(
                 "Fichier non trouvé",
                 "Impossible de trouver automatiquement le fichier log.\n"
+                "Le scanner a cherché sur tous les disques disponibles.\n\n"
                 "Veuillez le sélectionner manuellement."
             )
     

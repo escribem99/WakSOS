@@ -32,17 +32,62 @@ class WakSOS:
         
         # Sélectionner le fichier log
         log_path = self.config.get("log_path")
+        
+        # Si le log_path est vide ou n'existe pas, essayer la détection automatique d'abord
+        if not log_path or not os.path.exists(log_path):
+            from log_parser import WakfuLogParser
+            parser = WakfuLogParser()
+            # La méthode find_default_log_path() scanne automatiquement tous les disques
+            if os.path.exists(parser.log_path):
+                detected_path = parser.log_path
+                # Demander confirmation à l'utilisateur avant d'enregistrer
+                try:
+                    # Créer une fenêtre temporaire pour la boîte de dialogue
+                    temp_root = tk.Tk()
+                    temp_root.withdraw()  # Cacher la fenêtre principale
+                    from tkinter import messagebox
+                    
+                    response = messagebox.askyesno(
+                        "Fichier log détecté",
+                        f"Un fichier log a été détecté automatiquement :\n\n{detected_path}\n\n"
+                        f"Souhaitez-vous utiliser ce fichier ?",
+                        icon='question'
+                    )
+                    temp_root.destroy()
+                    
+                    if response:
+                        log_path = detected_path
+                        # Sauvegarder le chemin trouvé dans la config
+                        self.config["log_path"] = log_path
+                        try:
+                            with open("config.json", 'w', encoding='utf-8') as f:
+                                import json
+                                json.dump(self.config, f, indent=2, ensure_ascii=False)
+                            info(f"✓ Fichier log détecté et sauvegardé: {log_path}")
+                        except:
+                            pass  # En cas d'erreur de sauvegarde, continuer quand même
+                    else:
+                        # L'utilisateur a refusé, on passera au sélecteur
+                        log_path = None
+                except Exception as e:
+                    # En cas d'erreur avec la boîte de dialogue, utiliser quand même le chemin détecté
+                    log_path = detected_path
+                    self.config["log_path"] = log_path
+                    try:
+                        with open("config.json", 'w', encoding='utf-8') as f:
+                            import json
+                            json.dump(self.config, f, indent=2, ensure_ascii=False)
+                        info(f"✓ Fichier log détecté et sauvegardé: {log_path}")
+                    except:
+                        pass
+        
+        # Si toujours pas trouvé, ouvrir le sélecteur
         if not skip_selection:
             if not log_path or not os.path.exists(log_path):
                 selector = LogSelector("config.json")
                 selector.run()
                 self.config = self.load_config()
                 log_path = self.config.get("log_path")
-                if not log_path or not os.path.exists(log_path):
-                    from log_parser import WakfuLogParser
-                    parser = WakfuLogParser()
-                    if os.path.exists(parser.log_path):
-                        log_path = parser.log_path
         
         # Initialiser le combo tracker d'abord
         self.combo_tracker = ComboTracker("iop_combos.json")

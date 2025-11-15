@@ -105,7 +105,22 @@ class WakfuLogParser:
     
     def find_default_log_path(self) -> str:
         """Trouve le chemin par défaut du fichier log de Wakfu"""
-        # Chemins possibles pour Windows
+        # D'abord, essayer le chemin standard avec l'utilisateur actuel
+        username = os.getenv('USERNAME') or os.getenv('USER') or 'User'
+        standard_path = os.path.join(
+            os.path.expanduser("~"),
+            "AppData", "Roaming", "zaap", "gamesLogs", "wakfu", "logs", "wakfu_chat.log"
+        )
+        
+        if os.path.exists(standard_path):
+            return standard_path
+        
+        # Si pas trouvé, scanner tous les disques disponibles
+        log_path = self._scan_all_drives_for_log(username)
+        if log_path:
+            return log_path
+        
+        # Chemins de fallback (anciens chemins possibles)
         possible_paths = [
             os.path.expanduser(r"~\AppData\Local\Ankama\Wakfu\logs\wakfu.log"),
             os.path.expanduser(r"~\AppData\Local\Ankama\Wakfu\logs\wakfu-debug.log"),
@@ -118,8 +133,71 @@ class WakfuLogParser:
             if os.path.exists(path):
                 return path
         
-        # Si aucun chemin trouvé, retourner le plus probable
-        return possible_paths[0]
+        # Si aucun chemin trouvé, retourner le chemin standard (même s'il n'existe pas)
+        return standard_path
+    
+    def _scan_all_drives_for_log(self, username: str) -> Optional[str]:
+        """
+        Scanne tous les disques disponibles pour trouver le fichier log
+        
+        Args:
+            username: Nom d'utilisateur à rechercher
+            
+        Returns:
+            Chemin du fichier log trouvé, ou None si non trouvé
+        """
+        import string
+        
+        # Chemin relatif depuis le dossier Users
+        relative_path = os.path.join("Users", username, "AppData", "Roaming", "zaap", "gamesLogs", "wakfu", "logs", "wakfu_chat.log")
+        
+        # Essayer d'abord avec win32api si disponible (plus fiable)
+        try:
+            import win32api
+            drives = win32api.GetLogicalDriveStrings()
+            drives = drives.split('\x00')[:-1]  # Enlever la dernière chaîne vide
+            
+            for drive in drives:
+                if drive and os.path.exists(drive):
+                    full_path = os.path.join(drive.rstrip('\\'), relative_path)
+                    if os.path.exists(full_path):
+                        return full_path
+        except ImportError:
+            # win32api non disponible, utiliser la méthode manuelle
+            pass
+        
+        # Méthode manuelle : scanner les lettres de disques (A: à Z:)
+        for drive_letter in string.ascii_uppercase:
+            drive = f"{drive_letter}:\\"
+            if os.path.exists(drive):
+                full_path = os.path.join(drive, relative_path)
+                if os.path.exists(full_path):
+                    return full_path
+        
+        # Si on n'a pas trouvé avec le nom d'utilisateur actuel, 
+        # essayer de scanner tous les dossiers Users sur chaque disque
+        for drive_letter in string.ascii_uppercase:
+            drive = f"{drive_letter}:\\"
+            if os.path.exists(drive):
+                users_dir = os.path.join(drive, "Users")
+                if os.path.exists(users_dir):
+                    try:
+                        # Lister tous les dossiers d'utilisateurs
+                        for user_folder in os.listdir(users_dir):
+                            user_path = os.path.join(users_dir, user_folder)
+                            if os.path.isdir(user_path) and not user_folder.startswith('.'):
+                                # Construire le chemin complet
+                                log_path = os.path.join(
+                                    user_path, "AppData", "Roaming", "zaap", 
+                                    "gamesLogs", "wakfu", "logs", "wakfu_chat.log"
+                                )
+                                if os.path.exists(log_path):
+                                    return log_path
+                    except (PermissionError, OSError):
+                        # Ignorer les erreurs d'accès
+                        continue
+        
+        return None
     
     def read_new_lines(self) -> list:
         """Lit les nouvelles lignes depuis la dernière position"""
