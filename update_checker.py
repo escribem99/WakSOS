@@ -329,13 +329,32 @@ def perform_update(repo_url=None, preserve_config=True):
             error_msg = clone_result.stderr or clone_result.stdout or "Erreur inconnue"
             return False, f"Erreur lors du clonage du dépôt:\n{error_msg}"
         
+        # Fonction helper pour supprimer le dossier temporaire de manière robuste
+        def force_remove_temp_dir():
+            """Supprime le dossier temporaire avec plusieurs tentatives"""
+            if not temp_path.exists():
+                return
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    shutil.rmtree(temp_path, ignore_errors=(attempt == max_attempts - 1))
+                    if not temp_path.exists():
+                        return
+                except:
+                    if attempt < max_attempts - 1:
+                        import time
+                        time.sleep(0.3)
+                    else:
+                        # Dernière tentative avec ignore_errors
+                        try:
+                            shutil.rmtree(temp_path, ignore_errors=True)
+                        except:
+                            pass
+        
         # Vérifier que main.py existe dans le clone
         if not (temp_path / "main.py").exists():
             # Nettoyer le dossier temporaire
-            try:
-                shutil.rmtree(temp_path)
-            except:
-                pass
+            force_remove_temp_dir()
             return False, "Erreur: main.py introuvable dans le dépôt cloné"
         
         # Vérifier la syntaxe de main.py
@@ -348,10 +367,7 @@ def perform_update(repo_url=None, preserve_config=True):
         if syntax_check.returncode != 0:
             error_msg = syntax_check.stderr or "Erreur de syntaxe inconnue"
             # Nettoyer le dossier temporaire
-            try:
-                shutil.rmtree(temp_path)
-            except:
-                pass
+            force_remove_temp_dir()
             return False, f"Erreur de syntaxe dans main.py du dépôt:\n{error_msg}"
         
         # Au lieu de renommer/supprimer le dossier actuel (qui peut être verrouillé),
@@ -416,18 +432,11 @@ def perform_update(repo_url=None, preserve_config=True):
                     pass
         except Exception as e:
             # Nettoyer le dossier temporaire
-            try:
-                shutil.rmtree(temp_path)
-            except:
-                pass
+            force_remove_temp_dir()
             return False, f"Erreur lors de la copie des fichiers: {e}"
         
         # Supprimer le dossier temporaire après la mise à jour réussie
-        try:
-            if temp_path.exists():
-                shutil.rmtree(temp_path)
-        except:
-            pass  # Pas grave si on ne peut pas supprimer le dossier temporaire
+        force_remove_temp_dir()
         
         # Supprimer le backup après succès
         try:
