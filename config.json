@@ -13,7 +13,7 @@
       }
     }
   },
-  "log_path": " ",
+  "log_path": "C:/Users/kelia/AppData/Roaming/zaap/gamesLogs/wakfu/logs/wakfu_chat.log",
   "classes": {
     "iop": {
       "enabled": true,
@@ -32,9 +32,9 @@
     }
   },
   "window_mapping": {
-    "cra": {
-      "hwnd": 7538728,
-      "title": "Nemen-Arc - WAKFU"
+    "iop": {
+      "hwnd": 3147434,
+      "title": "Tarrtin - WAKFU"
     }
   }
 }

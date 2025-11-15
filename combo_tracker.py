@@ -123,6 +123,23 @@ class ComboTracker:
             return sort_info.get("icone")
         return None
     
+    def is_sort_combo(self, sort_name: str) -> bool:
+        """
+        Vérifie si un sort est un sort combo (influence les combos)
+        
+        Args:
+            sort_name: Nom du sort
+            
+        Returns:
+            True si le sort est un combo, False sinon (par défaut True pour compatibilité)
+        """
+        sort_info = self.sorts.get(sort_name)
+        if sort_info:
+            # Par défaut, si is_combo n'est pas défini, on considère que c'est un combo (compatibilité)
+            return sort_info.get("is_combo", True)
+        # Si le sort n'est pas trouvé, on retourne False (ne pas traiter comme combo)
+        return False
+    
     def _costs_match(self, cost1: Dict[str, int], cost2: Dict[str, int]) -> bool:
         """
         Vérifie si deux coûts correspondent

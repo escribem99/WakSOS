@@ -50,6 +50,20 @@ class WakSOS:
         # Initialiser le tracker d'états avec le combo_tracker pour détecter les coûts
         self.tracker = StateTracker(log_path=log_path, update_callback=self.on_states_update, combo_tracker=self.combo_tracker)
         
+        # Réinitialiser les états dans le parser AVANT de créer les overlays
+        # Cela évite que les anciennes valeurs du log soient rechargées
+        self.tracker.parser.reset_states()
+        # Réinitialiser aussi la position du fichier pour ne lire que les nouvelles lignes
+        if hasattr(self.tracker.parser, 'file_position'):
+            try:
+                # Se positionner à la fin du fichier pour ignorer les anciennes lignes
+                if os.path.exists(log_path):
+                    with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        f.seek(0, 2)  # Se positionner à la fin
+                        self.tracker.parser.file_position = f.tell()
+            except:
+                pass  # En cas d'erreur, continuer quand même
+        
         # Callback pour réinitialiser les états
         def reset_states_callback(class_name):
             self.tracker.reset_states(class_name)
@@ -116,7 +130,18 @@ class WakSOS:
                 self.overlay_iop.load_combo_display()
                 # Forcer l'affichage immédiat de l'overlay
                 self.overlay_iop.show()
-                info("✓ Overlay Iop créé et affiché")
+                # Attendre un peu pour que l'overlay soit complètement initialisé
+                time.sleep(0.1)
+                # Réinitialiser automatiquement l'overlay au lancement
+                # Réinitialiser d'abord les combos
+                self.combo_tracker.reset_combo()
+                self.overlay_iop.handle_combo_update({"type": "combo_reset"})
+                # Réinitialiser les états (cela va aussi mettre à jour l'affichage via le callback)
+                self.overlay_iop.reset_states()
+                # Réinitialiser explicitement l'affichage des états à 0
+                if self.overlay_iop.class_name == "iop":
+                    self.overlay_iop.update_states({"iop": {"Concentration": 0, "Courroux": 0, "Préparation": 0}}, "iop")
+                info("✓ Overlay Iop créé et affiché (reset automatique)")
             except Exception as e:
                 error(f"Erreur lors de la création de l'overlay Iop: {e}")
                 import traceback
@@ -127,7 +152,14 @@ class WakSOS:
                 self.overlay_cra = ComboOverlay("cra", "config.json", reset_callback=reset_states_callback)
                 # Forcer l'affichage immédiat de l'overlay
                 self.overlay_cra.show()
-                info("✓ Overlay Cra créé et affiché")
+                # Attendre un peu pour que l'overlay soit complètement initialisé
+                time.sleep(0.1)
+                # Réinitialiser automatiquement l'overlay au lancement
+                self.overlay_cra.reset_states()
+                # Réinitialiser explicitement l'affichage des états à 0
+                if self.overlay_cra.class_name == "cra":
+                    self.overlay_cra.update_states({"cra": {"Affûtage": 0, "Précision": 0}}, "cra")
+                info("✓ Overlay Cra créé et affiché (reset automatique)")
             except Exception as e:
                 error(f"Erreur lors de la création de l'overlay Cra: {e}")
                 import traceback
@@ -294,10 +326,13 @@ class WakSOS:
                             if self.overlay_iop:
                                 self.overlay_iop._update_last_sort(sort_name)
                             
-                            # Passer le coût au combo_tracker si disponible (pour le sort Charge notamment)
-                            combo_update = self.combo_tracker.process_sort(sort_name, sort_cost=sort_cost)
-                            if self.overlay_iop:
-                                self.overlay_iop.handle_combo_update(combo_update)
+                            # Vérifier si le sort est un sort combo avant de le traiter
+                            if self.combo_tracker.is_sort_combo(sort_name):
+                                # Passer le coût au combo_tracker si disponible (pour le sort Charge notamment)
+                                combo_update = self.combo_tracker.process_sort(sort_name, sort_cost=sort_cost)
+                                if self.overlay_iop:
+                                    self.overlay_iop.handle_combo_update(combo_update)
+                            # Si le sort n'est pas un combo, on ne fait rien (juste l'affichage du dernier sort)
                             
                             # Réinitialiser la Préparation après chaque sort utilisé
                             if self.tracker:

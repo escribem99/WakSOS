@@ -149,12 +149,22 @@ class SortEditor:
         list_frame.pack(fill=tk.BOTH, expand=True, pady=10)
         
         # Treeview pour afficher les sorts
-        columns = ("Nom", "Icône", "PA", "PM", "PW")
+        columns = ("Nom", "Icône", "PA", "PM", "PW", "Combo")
         self.sort_tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=10)
         
-        for col in columns:
-            self.sort_tree.heading(col, text=col)
-            self.sort_tree.column(col, width=120)
+        # Configurer les colonnes
+        self.sort_tree.heading("Nom", text="Nom")
+        self.sort_tree.column("Nom", width=150)
+        self.sort_tree.heading("Icône", text="Icône")
+        self.sort_tree.column("Icône", width=150)
+        self.sort_tree.heading("PA", text="PA")
+        self.sort_tree.column("PA", width=50)
+        self.sort_tree.heading("PM", text="PM")
+        self.sort_tree.column("PM", width=50)
+        self.sort_tree.heading("PW", text="PW")
+        self.sort_tree.column("PW", width=50)
+        self.sort_tree.heading("Combo", text="Combo (cliquer pour changer)")
+        self.sort_tree.column("Combo", width=150)
         
         # Scrollbar
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.sort_tree.yview)
@@ -185,8 +195,11 @@ class SortEditor:
         )
         delete_btn.pack(side=tk.LEFT, padx=5)
         
-        # Bind double-click pour modifier
-        self.sort_tree.bind('<Double-1>', lambda e: self.edit_selected_sort())
+        # Bind double-click pour modifier (sauf sur la colonne Combo)
+        self.sort_tree.bind('<Double-1>', self.on_double_click)
+        
+        # Bind click simple sur la colonne "Combo" pour basculer is_combo
+        self.sort_tree.bind('<Button-1>', self.on_tree_click)
     
     def browse_icon(self):
         """Ouvre un dialogue pour sélectionner une image"""
@@ -268,9 +281,17 @@ class SortEditor:
         if "sorts" not in self.data:
             self.data["sorts"] = {}
         
+        # Si le sort existe déjà, conserver is_combo, sinon mettre True par défaut
+        existing_is_combo = True
+        if sort_name in self.data.get("sorts", {}):
+            existing_is_combo = self.data["sorts"][sort_name].get("is_combo", True)
+        else:
+            existing_is_combo = True  # Nouveau sort = combo par défaut
+        
         self.data["sorts"][sort_name] = {
             "cout": cout,
-            "icone": icon_filename or f"{sort_name}.png"
+            "icone": icon_filename or f"{sort_name}.png",
+            "is_combo": existing_is_combo
         }
         
         # Sauvegarder
@@ -290,6 +311,7 @@ class SortEditor:
             for sort_name, sort_data in self.data["sorts"].items():
                 cout = sort_data.get("cout", {})
                 icon = sort_data.get("icone", "")
+                is_combo = sort_data.get("is_combo", True)  # Par défaut True pour compatibilité
                 
                 self.sort_tree.insert(
                     "",
@@ -299,9 +321,41 @@ class SortEditor:
                         icon,
                         cout.get("PA", 0),
                         cout.get("PM", 0),
-                        cout.get("PW", 0)
+                        cout.get("PW", 0),
+                        "Oui" if is_combo else "Non"
                     )
                 )
+    
+    def on_tree_click(self, event):
+        """Gère les clics simples sur le Treeview, notamment pour basculer is_combo"""
+        region = self.sort_tree.identify_region(event.x, event.y)
+        if region == "cell":
+            column = self.sort_tree.identify_column(event.x)
+            item = self.sort_tree.identify_row(event.y)
+            
+            if item and column == "#6":  # Colonne "Combo" (index 6 car #0 est la colonne des lignes)
+                # Basculer is_combo pour ce sort
+                values = self.sort_tree.item(item, "values")
+                if values:
+                    sort_name = values[0]
+                    if sort_name in self.data.get("sorts", {}):
+                        # Basculer la valeur
+                        current_value = self.data["sorts"][sort_name].get("is_combo", True)
+                        self.data["sorts"][sort_name]["is_combo"] = not current_value
+                        
+                        # Sauvegarder
+                        if self.save_data():
+                            # Rafraîchir la liste
+                            self.refresh_sort_list()
+    
+    def on_double_click(self, event):
+        """Gère les double-clics sur le Treeview pour modifier un sort"""
+        region = self.sort_tree.identify_region(event.x, event.y)
+        if region == "cell":
+            column = self.sort_tree.identify_column(event.x)
+            # Ne pas modifier si on double-clique sur la colonne "Combo"
+            if column != "#6":
+                self.edit_selected_sort()
     
     def edit_selected_sort(self):
         """Modifie le sort sélectionné"""
@@ -319,6 +373,7 @@ class SortEditor:
             sort_data = self.data["sorts"][sort_name]
             cout = sort_data.get("cout", {})
             icon = sort_data.get("icone", "")
+            is_combo = sort_data.get("is_combo", True)  # Par défaut True pour compatibilité
             
             # Remplir le formulaire
             self.clear_form()

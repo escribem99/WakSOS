@@ -4,149 +4,173 @@
       "cout": {
         "PA": 2
       },
-      "icone": "Épée céleste.png"
+      "icone": "Épée céleste.png",
+      "is_combo": true
     },
     "Fulgur": {
       "cout": {
         "PA": 3
       },
-      "icone": "Fulgur.png"
+      "icone": "Fulgur.png",
+      "is_combo": true
     },
     "Super Iop Punch": {
       "cout": {
         "PA": 4
       },
-      "icone": "Super Iop Punch.png"
+      "icone": "Super Iop Punch.png",
+      "is_combo": false
     },
     "Jugement": {
       "cout": {
         "PA": 1
       },
-      "icone": "Jugement.png"
+      "icone": "Jugement.png",
+      "is_combo": true
     },
     "Colère de Iop": {
       "cout": {
         "PA": 6,
         "PW": 1
       },
-      "icone": "Colère de Iop.png"
+      "icone": "Colère de Iop.png",
+      "is_combo": false
     },
     "Ébranler": {
       "cout": {
         "PA": 2
       },
-      "icone": "Ébranler.png"
+      "icone": "Ébranler.png",
+      "is_combo": true
     },
     "Roknocerok": {
       "cout": {
         "PA": 4
       },
-      "icone": "Roknocerok.png"
+      "icone": "Roknocerok.png",
+      "is_combo": false
     },
     "Fendoir": {
       "cout": {
         "PA": 3
       },
-      "icone": "Fendoir.png"
+      "icone": "Fendoir.png",
+      "is_combo": true
     },
     "Ravage": {
       "cout": {
         "PA": 5
       },
-      "icone": "Ravage.png"
+      "icone": "Ravage.png",
+      "is_combo": false
     },
     "Jabs": {
       "cout": {
         "PA": 3
       },
-      "icone": "Jabs.png"
+      "icone": "Jabs.png",
+      "is_combo": true
     },
     "Rafale": {
       "cout": {
         "PA": 1
       },
-      "icone": "Rafale.png"
+      "icone": "Rafale.png",
+      "is_combo": true
     },
     "Torgnole": {
       "cout": {
         "PA": 2
       },
-      "icone": "Torgnole.png"
+      "icone": "Torgnole.png",
+      "is_combo": true
     },
     "Tannée": {
       "cout": {
         "PA": 4
       },
-      "icone": "Tannée.png"
+      "icone": "Tannée.png",
+      "is_combo": false
     },
     "Épée de Iop": {
       "cout": {
         "PA": 3
       },
-      "icone": "Épée de Iop.png"
+      "icone": "Épée de Iop.png",
+      "is_combo": true
     },
     "Focus": {
       "cout": {
         "PA": 2
       },
-      "icone": "Focus.png"
+      "icone": "Focus.png",
+      "is_combo": false
     },
     "Vertu": {
       "cout": {
         "PA": 2,
         "PW": 1
       },
-      "icone": "Vertu.png"
+      "icone": "Vertu.png",
+      "is_combo": false
     },
     "Amplification": {
       "cout": {
         "PM": 2,
         "PW": 2
       },
-      "icone": "Amplification.png"
+      "icone": "Amplification.png",
+      "is_combo": false
     },
     "Duel": {
       "cout": {
         "PA": 1
       },
-      "icone": "Duel.png"
+      "icone": "Duel.png",
+      "is_combo": false
     },
     "Posture": {
       "cout": {
         "PA": 2,
         "PW": 1
       },
-      "icone": "Posture.png"
+      "icone": "Posture.png",
+      "is_combo": false
     },
     "Heure de gloire": {
       "cout": {
         "PA": 3
       },
-      "icone": "Heure de gloire.png"
+      "icone": "Heure de gloire.png",
+      "is_combo": false
     },
     "Éventrail": {
       "cout": {
         "PM": 1
       },
-      "icone": "Éventrail.png"
+      "icone": "Éventrail.png",
+      "is_combo": true
     },
     "Uppercut": {
       "cout": {
         "PW": 1
       },
-      "icone": "Uppercut.png"
+      "icone": "Uppercut.png",
+      "is_combo": true
     },
     "Bond": {
       "cout": {
         "PA": 4
       },
-      "icone": "Bond.png"
+      "icone": "Bond.png",
+      "is_combo": false
     },
     "Étendard_de_bravoure": {
       "cout": {
         "PA": 2
       },
-      "icone": "Étendard de bravoure.png"
+      "icone": "Étendard de bravoure.png",
+      "is_combo": false
     }
   },
   "combos": {
@@ -225,6 +249,3 @@
     }
   }
 }
-
-
-
